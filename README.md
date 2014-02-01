@@ -14,5 +14,6 @@ programming: using data to drive decisions.
 ## Getting Started
 * Fork this repository and clone it to your machine
 * Install the [rubywarrior gem](https://github.com/ryanb/ruby-warrior#getting-started)
+* Run `rubywarrior` from this directory to start your AI
 * Work through levels, commit each time you pass a level
 * Submit a pull request to share your solution with the group!
