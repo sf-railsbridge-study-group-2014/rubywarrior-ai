@@ -1,41 +1,81 @@
 class Player
-  def initialize
-    @last_health = 0
+  attr_reader :direction, :warrior
+
+  def initialize(initial_health=20)
+    @direction     = :forward
+    @latest_health = initial_health
+    @max_health    = initial_health
+    @warrior       = nil
   end
 
-  def play_turn(warrior)
-    if taking_damage?(warrior)
-      if warrior.feel.captive?
-        warrior.rescue!
-      elsif warrior.feel.empty?
-        warrior.walk!
+  def play_turn(avatar)
+    @warrior = avatar
+
+    if taking_damage?
+      if feel_captive?
+        rescue_captive!
+      elsif feel_empty?
+        walk!
       else
-        warrior.attack!
+        attack!
       end
-    elsif warrior.feel.captive?
-      warrior.rescue!
-    elsif warrior.feel.empty?
-      if should_rest(warrior)
-        warrior.rest!
+    elsif feel_captive?
+      rescue_captive!
+    elsif feel_empty?
+      if should_rest?
+        rest!
       else
-        warrior.walk!
+        walk!
       end
     else
-      warrior.attack!
+      attack!
     end
 
     record_health(warrior)
   end
 
+  def attack!
+    warrior.attack!(direction)
+  end
+
+  def feel_captive?
+    warrior.feel(direction).captive?
+  end
+
+  def feel_empty?
+    warrior.feel(direction).empty?
+  end
+
+  def feel_wall?
+    warrior.feel(direction).wall?
+  end
+
   def record_health(warrior)
-    @last_health = warrior.health
+    @latest_health = warrior.health
   end
 
-  def should_rest(warrior)
-    warrior.health < 18
+  def rescue_captive!
+    warrior.rescue!(direction)
   end
 
-  def taking_damage?(warrior)
-    warrior.health < @last_health
+  def rest!
+    warrior.rest!
   end
+
+  def reverse_direction
+    @direction = (:forward == @direction ? :backward : :forward)
+  end
+
+  def should_rest?
+    warrior.health < @max_health
+  end
+
+  def taking_damage?
+    warrior.health < @latest_health
+  end
+
+  def walk!
+    warrior.walk!(direction)
+  end
+
 end
