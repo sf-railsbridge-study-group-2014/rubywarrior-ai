@@ -5,11 +5,15 @@ class Player
 
   def play_turn(warrior)
     if taking_damage?(warrior)
-      if warrior.feel.empty?
+      if warrior.feel.captive?
+        warrior.rescue!
+      elsif warrior.feel.empty?
         warrior.walk!
       else
         warrior.attack!
       end
+    elsif warrior.feel.captive?
+      warrior.rescue!
     elsif warrior.feel.empty?
       if should_rest(warrior)
         warrior.rest!
