@@ -2,7 +2,7 @@ class Player
   attr_reader :direction, :warrior
 
   def initialize(initial_health=20)
-    @direction     = :forward
+    @direction     = :backward
     @latest_health = initial_health
     @max_health    = initial_health
     @on_rest       = false
