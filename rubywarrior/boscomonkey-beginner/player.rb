@@ -2,7 +2,7 @@ class Player
   attr_reader :direction, :warrior
 
   def initialize(initial_health=20)
-    @direction     = :backward
+    @direction     = :forward
     @latest_health = initial_health
     @max_health    = initial_health
     @on_rest       = false
@@ -40,7 +40,6 @@ class Player
       walk!
     elsif feel_wall?
       reverse_direction
-      advance
     else
       attack!
     end
@@ -52,7 +51,7 @@ class Player
 
   def cancel_retreat
     @on_retreat = false
-    reverse_direction
+    @direction = :forward
   end
 
   def feel_captive?
@@ -93,7 +92,7 @@ class Player
   end
 
   def reverse_direction
-    @direction = (:forward == @direction ? :backward : :forward)
+    warrior.pivot!(:backward)
   end
 
   def should_rest?
@@ -102,7 +101,7 @@ class Player
 
   def signal_retreat
     @on_retreat = true
-    reverse_direction
+    @direction = :backward
   end
 
   def taking_damage?
