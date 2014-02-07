@@ -13,20 +13,13 @@ class Player
   def play_turn(avatar)
     remember_current_warrior(avatar)
 
-    if retreating? && taking_damage?
-      advance
-    elsif taking_damage?
+    if taking_damage?
       signal_retreat
       advance
-    elsif resting?
+    elsif resting? || should_rest?
       rest!
-    elsif should_rest?
-      rest!
-    elsif retreating? # but not taking damage
-      # assumes rested enough
-      cancel_retreat
-      advance
     else
+      cancel_retreat if retreating?
       advance
     end
 
