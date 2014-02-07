@@ -5,37 +5,54 @@ class Player
     @direction     = :forward
     @latest_health = initial_health
     @max_health    = initial_health
+    @on_rest       = false
+    @on_retreat    = false
     @warrior       = nil
   end
 
   def play_turn(avatar)
-    @warrior = avatar
+    remember_current_warrior(avatar)
 
-    if taking_damage?
-      if feel_captive?
-        rescue_captive!
-      elsif feel_empty?
-        walk!
-      else
-        attack!
-      end
-    elsif feel_captive?
+    if retreating? && taking_damage?
+      advance
+    elsif taking_damage?
+      signal_retreat
+      advance
+    elsif resting?
+      rest!
+    elsif should_rest?
+      rest!
+    elsif retreating? # but not taking damage
+      # assumes rested enough
+      cancel_retreat
+      advance
+    else
+      advance
+    end
+
+    remember_health
+  end
+
+  def advance
+    if feel_captive?
       rescue_captive!
     elsif feel_empty?
-      if should_rest?
-        rest!
-      else
-        walk!
-      end
+      walk!
+    elsif feel_wall?
+      reverse_direction
+      advance
     else
       attack!
     end
-
-    record_health(warrior)
   end
 
   def attack!
     warrior.attack!(direction)
+  end
+
+  def cancel_retreat
+    @on_retreat = false
+    reverse_direction
   end
 
   def feel_captive?
@@ -50,7 +67,11 @@ class Player
     warrior.feel(direction).wall?
   end
 
-  def record_health(warrior)
+  def remember_current_warrior(avatar)
+    @warrior = avatar
+  end
+
+  def remember_health
     @latest_health = warrior.health
   end
 
@@ -60,6 +81,15 @@ class Player
 
   def rest!
     warrior.rest!
+    @on_rest = (warrior.health < @max_health-2)
+  end
+
+  def resting?
+    @on_rest
+  end
+
+  def retreating?
+    @on_retreat
   end
 
   def reverse_direction
@@ -67,11 +97,16 @@ class Player
   end
 
   def should_rest?
-    warrior.health < @max_health
+    warrior.health < @max_health/2
+  end
+
+  def signal_retreat
+    @on_retreat = true
+    reverse_direction
   end
 
   def taking_damage?
-    warrior.health < @latest_health
+    warrior.health < @latest_health && should_rest?
   end
 
   def walk!
