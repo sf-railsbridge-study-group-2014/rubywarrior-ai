@@ -13,7 +13,9 @@ class Player
   def play_turn(avatar)
     remember_current_warrior(avatar)
 
-    if taking_damage?
+    if target_in_sight?
+      shoot!
+    elsif taking_damage?
       signal_retreat
       advance
     elsif resting? || should_rest?
@@ -59,6 +61,10 @@ class Player
     warrior.feel(direction).wall?
   end
 
+  def look
+    warrior.look(direction)
+  end
+
   def remember_current_warrior(avatar)
     @warrior = avatar
   end
@@ -88,6 +94,10 @@ class Player
     warrior.pivot!(:backward)
   end
 
+  def shoot!
+    warrior.shoot!(direction)
+  end
+
   def should_rest?
     warrior.health < @max_health/2
   end
@@ -99,6 +109,18 @@ class Player
 
   def taking_damage?
     warrior.health < @latest_health && should_rest?
+  end
+
+  def target_in_sight?
+    look.each do |cell|
+      if cell.captive? || cell.wall?
+        return false
+      elsif !cell.empty?
+        return true
+      end
+    end
+
+    false
   end
 
   def walk!
