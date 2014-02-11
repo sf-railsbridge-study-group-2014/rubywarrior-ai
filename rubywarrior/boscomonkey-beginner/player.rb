@@ -13,8 +13,16 @@ class Player
   def play_turn(avatar)
     remember_current_warrior(avatar)
 
-    if target_in_sight?
-      shoot!
+    # puts scan(:forward)
+    # puts scan(:backward)
+
+    random_direction = (rand(2) == 0 ? :forward : :backward)
+    other_direction  = (random_direction == :forward ? :backward : :forward)
+
+    if target_in_sight?(random_direction)
+      shoot!(random_direction)
+    elsif target_in_sight?(other_direction)
+        shoot!(other_direction)
     elsif taking_damage?
       signal_retreat
       advance
@@ -61,8 +69,8 @@ class Player
     warrior.feel(direction).wall?
   end
 
-  def look
-    warrior.look(direction)
+  def look(orientation=self.direction)
+    warrior.look(orientation)
   end
 
   def remember_current_warrior(avatar)
@@ -94,8 +102,8 @@ class Player
     warrior.pivot!(:backward)
   end
 
-  def shoot!
-    warrior.shoot!(direction)
+  def shoot!(orientation=self.direction)
+    warrior.shoot!(orientation)
   end
 
   def should_rest?
@@ -111,8 +119,8 @@ class Player
     warrior.health < @latest_health && should_rest?
   end
 
-  def target_in_sight?
-    look.each do |cell|
+  def target_in_sight?(orientation=self.direction)
+    look(orientation).each do |cell|
       if cell.captive? || cell.wall?
         return false
       elsif !cell.empty?
@@ -125,6 +133,28 @@ class Player
 
   def walk!
     warrior.walk!(direction)
+  end
+
+  def scan(orientation)
+    cells = warrior.look(orientation)
+    summary = cells.collect {|cell|
+      if cell.captive?
+        'C'
+      elsif cell.empty?
+        '_'
+      elsif cell.wall?
+        '|'
+      else
+        # extra_methods = cell.methods - Object.new.methods
+        # question_methods = extra_methods.grep /\?/
+        # question_methods.inject({}) {|memo, msg|
+        #   memo[msg] = cell.send(msg)
+        #   memo
+        # }
+        'X'
+      end
+    }
+    "SCAN #{orientation}:\t#{summary}"
   end
 
 end
