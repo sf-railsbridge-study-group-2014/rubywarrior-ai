@@ -13,8 +13,7 @@ class Player
   def play_turn(avatar)
     remember_current_warrior(avatar)
 
-    # puts scan(:forward)
-    # puts scan(:backward)
+    puts "#{scan(:backward).reverse}\tMYSELF\t#{scan(:forward)}"
 
     random_direction = (rand(2) == 0 ? :forward : :backward)
     other_direction  = (random_direction == :forward ? :backward : :forward)
@@ -137,24 +136,27 @@ class Player
 
   def scan(orientation)
     cells = warrior.look(orientation)
-    summary = cells.collect {|cell|
-      if cell.captive?
-        'C'
-      elsif cell.empty?
-        '_'
-      elsif cell.wall?
-        '|'
-      else
-        # extra_methods = cell.methods - Object.new.methods
-        # question_methods = extra_methods.grep /\?/
-        # question_methods.inject({}) {|memo, msg|
-        #   memo[msg] = cell.send(msg)
-        #   memo
-        # }
-        'X'
-      end
-    }
-    "SCAN #{orientation}:\t#{summary}"
+    cells_to_array(cells)
   end
 
+  def cells_to_array(cells)
+    cells.inject([]) {|memo, cell|
+      if cell.captive?
+        memo.push 'C'
+      elsif cell.empty?
+        memo.push '_'
+      elsif cell.wall?
+        memo.push '|'
+        return memo
+      else
+        extra_methods = cell.methods - Object.new.methods
+        question_methods = extra_methods.grep /\?/
+        enemy = question_methods.inject([]) {|arry, msg|
+          arry.push(msg) if cell.send(msg)
+          arry
+        }
+        memo.push(enemy.join)
+      end
+    }
+  end
 end
