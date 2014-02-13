@@ -10,34 +10,6 @@ class Player
     @warrior       = nil
   end
 
-=begin
-
-if enemy_immediately_in_direction
-  attack!(direction)
-
-if enemy_in_arrow_range_on_both_sides
-  if last_attack_direction
-    reverse_last_attack_direction
-  else
-    randomly_choose_attack_direction
-  end
-  shoot!(last_attack_direction)
-else
-  cancel_last_attack_direction
-
-if captive_immediately_in_direction
-  rescue!(direction)
-
-if feel_wall?
-  reverse_direction!
-
-if feel_captive?
-  rescue!
-
-if empty?
-  walk!
-
-=end
   def play_turn(avatar)
     remember_current_warrior(avatar)
 
@@ -60,48 +32,47 @@ if empty?
               @alpha_direction = @alpha_shot_count = @beta_shot_count = nil
             end }
           ).
-      add(:shoot_alpha_or_beta_3_times_consecutively,
-          ->(r) { !@alpha_direction.nil? },
+      add(:shoot_alpha,
+          ->(r) { enemies_on_2_sides? && @alpha_shot_count == @beta_shot_count },
           ->(r) {
-            def shoot_alpha!
-              shoot!(@alpha_direction)
-              @alpha_shot_count += 1
-            end
-
-            def shoot_beta!
-              shoot!(opposite_of @alpha_direction)
-              @beta_shot_count += 1
-            end
-
-            if @alpha_shot_count == @beta_shot_count
-              shoot_alpha!
-            elsif @alpha_shot_count > @beta_shot_count
-              if @alpha_shot_count%3 == 0
-                shoot_beta!
-              else
-                shoot_alpha!
-              end
-            else # @alpha_shot_count < @beta_shot_count
-              if @beta_shot_count%3 == 0
-                shoot_alpha!
-              else
-                shoot_beta!
-              end
-            end
-
-            r.stop! }
+            shoot_alpha!
+            r.halt! }
+          ).
+      add(:continue_shooting_alpha,
+          ->(r) { enemies_on_2_sides? && shot_alpha_more? && @alpha_shot_count%3 != 0 },
+          ->(r) {
+            shoot_alpha!
+            r.halt! }
+          ).
+      add(:switch_to_shooting_beta,
+          ->(r) { enemies_on_2_sides? && shot_alpha_more? && @alpha_shot_count%3 == 0 },
+          ->(r) {
+            shoot_beta!
+            r.halt! }
+          ).
+      add(:continue_shooting_beta,
+          ->(r) { enemies_on_2_sides? && shot_beta_more? && @beta_shot_count%3 != 0 },
+          ->(r) {
+            shoot_beta!
+            r.halt! }
+          ).
+      add(:switch_to_shooting_alpha,
+          ->(r) { enemies_on_2_sides? && shot_beta_more? && @alpha_shot_count%3 == 0 },
+          ->(r) {
+            shoot_alpha!
+            r.halt! }
           ).
       add(:target_in_sight_random_direction,
           ->(r) { target_in_sight?(random_direction) },
           ->(r) {
             shoot!(random_direction)
-            r.stop! }
+            r.halt! }
           ).
       add(:target_in_sight_other_direction,
           ->(r) { target_in_sight?(opposite_of random_direction) },
           ->(r) {
             shoot!(opposite_of random_direction)
-            r.stop! }
+            r.halt! }
           ).
       add(:captive_in_sight_random_direction,
           ->(r) { captive_in_sight?(random_direction) },
@@ -115,33 +86,33 @@ if empty?
           ->(r) { resting? || should_rest? },
           ->(r) {
             rest!
-            r.stop! }
+            r.halt! }
           ).
       add(:attack_if_enemy,
           ->(r) { feel_enemy? },
           ->(r) {
             attack!
-            r.stop! }
+            r.halt! }
           ).
       add(:pivot_if_wall,
           ->(r) { feel_wall? },
           ->(r) {
             reverse_direction!
-            r.stop! }
+            r.halt! }
           ).
       add(:rescue_if_captive,
           ->(r) { feel_captive? },
           ->(r) {
             rescue_captive!
-            r.stop! }
+            r.halt! }
           ).
       add(:walk_if_empty,
           ->(r) { feel_empty? },
           ->(r) {
             walk!
-            r.stop! }
+            r.halt! }
           ).
-      run
+      run!
 
     remember_health
   end
@@ -167,6 +138,10 @@ if empty?
     end
 
     false
+  end
+
+  def enemies_on_2_sides?
+    !@alpha_direction.nil?
   end
 
   def feel_captive?
@@ -224,6 +199,24 @@ if empty?
 
   def shoot!(orientation=self.direction)
     warrior.shoot!(orientation)
+  end
+
+  def shoot_alpha!
+    shoot!(@alpha_direction)
+    @alpha_shot_count += 1
+  end
+
+  def shoot_beta!
+    shoot!(opposite_of @alpha_direction)
+    @beta_shot_count += 1
+  end
+
+  def shot_alpha_more?
+    @alpha_shot_count > @beta_shot_count
+  end
+
+  def shot_beta_more?
+    @alpha_shot_count < @beta_shot_count
   end
 
   def should_rest?
@@ -298,31 +291,31 @@ class Rules
     self	# for chaining
   end
 
-  def log_rule(success, name)
+  def log(success, name)
     puts "RULE:\t#{success ? '+' : '-'}\t#{name}" if success
   end
 
-  def run
+  def run!
     @exit_run = false
 
     @rules.each do |rule|
       if rule[:if].call(self)
         rule[:then].call(self)
 
-        log_rule(true, rule[:name])
+        log(true, rule[:name])
       else
         if rule[:else]
           rule[:else].call(self)
         end
 
-        log_rule(false, rule[:name])
+        log(false, rule[:name])
       end
 
       break if @exit_run
     end
   end
 
-  def stop!
+  def halt!
     @exit_run = true
   end
 end
