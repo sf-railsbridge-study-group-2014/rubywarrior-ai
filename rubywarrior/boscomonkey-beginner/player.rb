@@ -44,56 +44,100 @@ if empty?
     # puts "#{scan(:backward).reverse}\tMYSELF\t#{scan(:forward)}"
 
     random_direction = (rand(2) == 0 ? :forward : :backward)
-    other_direction  = (random_direction == :forward ? :backward : :forward)
 
     Rules.new.
+      add(:target_in_sight_both_direction,
+          ->(r) { target_in_sight?(:forward) && target_in_sight?(:backward) },
+          ->(r) {
+            if @alpha_direction.nil?
+              @alpha_direction = :backward
+              @alpha_shot_count = 0
+              @beta_shot_count = 0
+            end 
+          },
+          ->(r) {
+            if @alpha_direction
+              @alpha_direction = @alpha_shot_count = @beta_shot_count = nil
+            end }
+          ).
+      add(:shoot_alpha_or_beta_3_times_consecutively,
+          ->(r) { !@alpha_direction.nil? },
+          ->(r) {
+            def shoot_alpha!
+              shoot!(@alpha_direction)
+              @alpha_shot_count += 1
+            end
+
+            def shoot_beta!
+              shoot!(opposite_of @alpha_direction)
+              @beta_shot_count += 1
+            end
+
+            if @alpha_shot_count == @beta_shot_count
+              shoot_alpha!
+            elsif @alpha_shot_count > @beta_shot_count
+              if @alpha_shot_count%3 == 0
+                shoot_beta!
+              else
+                shoot_alpha!
+              end
+            else # @alpha_shot_count < @beta_shot_count
+              if @beta_shot_count%3 == 0
+                shoot_alpha!
+              else
+                shoot_beta!
+              end
+            end
+
+            r.stop! }
+          ).
       add(:target_in_sight_random_direction,
-          lambda {|r| target_in_sight?(random_direction) },
-          lambda {|r|
+          ->(r) { target_in_sight?(random_direction) },
+          ->(r) {
             shoot!(random_direction)
             r.stop! }
           ).
       add(:target_in_sight_other_direction,
-          lambda {|r| target_in_sight?(other_direction) },
-          lambda {|r|
-            shoot!(other_direction)
+          ->(r) { target_in_sight?(opposite_of random_direction) },
+          ->(r) {
+            shoot!(opposite_of random_direction)
             r.stop! }
           ).
       add(:captive_in_sight_random_direction,
-          lambda {|r| captive_in_sight?(random_direction) },
-          lambda {|r| @direction = random_direction }
+          ->(r) { captive_in_sight?(random_direction) },
+          ->(r) { @direction = random_direction }
           ).
       add(:captive_in_sight_other_direction,
-          lambda {|r| captive_in_sight?(other_direction) },
-          lambda {|r| @direction = other_direction }
+          ->(r) { captive_in_sight?(opposite_of random_direction) },
+          ->(r) { @direction = opposite_of random_direction }
           ).
       add(:resting_or_should_rest,
-          lambda {|r| resting? || should_rest? },
-          lambda {|r|
+          ->(r) { resting? || should_rest? },
+          ->(r) {
             rest!
             r.stop! }
           ).
       add(:attack_if_enemy,
-          lambda {|r| feel_enemy? },
-          lambda {|r|
+          ->(r) { feel_enemy? },
+          ->(r) {
             attack!
             r.stop! }
           ).
       add(:pivot_if_wall,
-          lambda {|r| feel_wall? },
-          lambda {|r|
+          ->(r) { feel_wall? },
+          ->(r) {
             reverse_direction!
             r.stop! }
           ).
       add(:rescue_if_captive,
-          lambda {|r| feel_captive? },
-          lambda {|r|
+          ->(r) { feel_captive? },
+          ->(r) {
             rescue_captive!
             r.stop! }
           ).
       add(:walk_if_empty,
-          lambda {|r| feel_empty? },
-          lambda {|r|
+          ->(r) { feel_empty? },
+          ->(r) {
             walk!
             r.stop! }
           ).
@@ -143,6 +187,10 @@ if empty?
 
   def look(orientation=self.direction)
     warrior.look(orientation)
+  end
+
+  def opposite_of(dir)
+    :forward == dir ? :backward : :forward
   end
 
   def remember_current_warrior(avatar)
