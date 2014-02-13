@@ -8,17 +8,9 @@ class Player
     @on_rest       = false
     @on_retreat    = false
     @warrior       = nil
-  end
 
-  def play_turn(avatar)
-    remember_current_warrior(avatar)
-
-    # puts "#{scan(:backward).reverse}\tMYSELF\t#{scan(:forward)}"
-
-    random_direction = (rand(2) == 0 ? :forward : :backward)
-
-    Rules.new.
-      add(:target_in_sight_both_direction,
+    @rules = Rules.new.
+      add(:target_in_sight_both_directions,
           ->(r) { target_in_sight?(:forward) && target_in_sight?(:backward) },
           ->(r) {
             if @alpha_direction.nil?
@@ -62,25 +54,21 @@ class Player
             shoot_alpha!
             r.halt! }
           ).
-      add(:target_in_sight_random_direction,
-          ->(r) { target_in_sight?(random_direction) },
+      add(:shoot_target_in_sight,
+          ->(r) { target_in_sight? },
           ->(r) {
-            shoot!(random_direction)
+            shoot!
             r.halt! }
           ).
-      add(:target_in_sight_other_direction,
-          ->(r) { target_in_sight?(opposite_of random_direction) },
+      add(:target_in_sight_in_other_direction,
+          ->(r) { target_in_sight?(opposite_of direction) },
           ->(r) {
-            shoot!(opposite_of random_direction)
+            shoot!(opposite_of direction)
             r.halt! }
-          ).
-      add(:captive_in_sight_random_direction,
-          ->(r) { captive_in_sight?(random_direction) },
-          ->(r) { @direction = random_direction }
           ).
       add(:captive_in_sight_other_direction,
-          ->(r) { captive_in_sight?(opposite_of random_direction) },
-          ->(r) { @direction = opposite_of random_direction }
+          ->(r) { captive_in_sight?(opposite_of direction) },
+          ->(r) { @direction = opposite_of direction }
           ).
       add(:resting_or_should_rest,
           ->(r) { resting? || should_rest? },
@@ -111,8 +99,14 @@ class Player
           ->(r) {
             walk!
             r.halt! }
-          ).
-      run!
+          )
+  end
+
+  def play_turn(avatar)
+    remember_current_warrior(avatar)
+
+    # puts "#{scan(:backward).reverse}\tMYSELF\t#{scan(:forward)}"
+    @rules.run!
 
     remember_health
   end
